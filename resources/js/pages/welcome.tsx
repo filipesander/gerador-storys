@@ -1,11 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Calendar, Download, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { StoryCanvas, STORY_HEIGHT, STORY_WIDTH } from '@/components/stories/story-canvas';
-import { TEMPLATES, getTemplate } from '@/lib/stories/templates';
-import type { StoryData } from '@/lib/stories/story-data';
 import AppLogoIcon from '@/components/app-logo-icon';
-import { dashboard, login, register } from '@/routes';
+import { StoryCanvas, STORY_HEIGHT, STORY_WIDTH } from '@/components/stories/story-canvas';
+import { Button } from '@/components/ui/button';
+import type { StoryData } from '@/lib/stories/story-data';
+import { TEMPLATES, getTemplate } from '@/lib/stories/templates';
+import { agenda, login, register } from '@/routes';
 
 // --- Sample data for the hero mockup ---
 const DEMO_DATA: StoryData = {
@@ -78,7 +78,7 @@ export default function Welcome() {
                         <nav className="flex items-center gap-3">
                             {auth.user ? (
                                 <Button asChild size="sm">
-                                    <Link href={dashboard()}>Painel</Link>
+                                    <Link href={agenda()}>Painel</Link>
                                 </Button>
                             ) : (
                                 <>
@@ -271,6 +271,7 @@ export default function Welcome() {
                         <div className="grid gap-8 md:grid-cols-3">
                             {STEPS.map((step, index) => {
                                 const Icon = step.icon;
+
                                 return (
                                     <div key={step.num} className="group relative">
                                         {/* Connector line between steps */}

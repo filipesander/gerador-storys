@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { CalendarClock, LayoutGrid } from 'lucide-react';
+import { CalendarClock, CalendarDays } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,15 +13,15 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { agenda } from '@/routes';
 import { stories } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Painel',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Agenda',
+        href: agenda(),
+        icon: CalendarDays,
     },
     {
         title: 'Gerador de Stories',
@@ -39,7 +39,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={agenda()} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

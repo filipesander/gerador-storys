@@ -1,0 +1,213 @@
+import { Deferred, Head, router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
+import { agenda } from '@/routes';
+
+type Appointment = {
+    date: string;
+    date_label: string;
+    time: string;
+    duration_minutes: number;
+    end_time: string;
+    client: string;
+    service: string;
+    status: string;
+    notes: string;
+    interested: string;
+};
+
+type AppointmentsPayload = { ok: boolean; items: Appointment[] };
+
+type Props = {
+    period: 'dia' | 'semana';
+    date: string;
+    range: { start: string; end: string };
+    appointments?: AppointmentsPayload;
+};
+
+function shiftISO(iso: string, days: number): string {
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() + days);
+
+    return d.toISOString().slice(0, 10);
+}
+
+function visit(period: string, date: string, refresh = false) {
+    router.get(
+        agenda().url,
+        refresh ? { period, date, refresh: 1 } : { period, date },
+        { preserveState: true, preserveScroll: true, preserveUrl: false },
+    );
+}
+
+function statusClasses(status: string): string {
+    const s = status.toLowerCase();
+
+    if (s.startsWith('confirm')) {
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+    }
+
+    if (s.startsWith('a confirmar') || s.includes('confirmar')) {
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
+    }
+
+    return 'bg-muted text-muted-foreground';
+}
+
+function AgendaSkeleton() {
+    return (
+        <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            ))}
+        </div>
+    );
+}
+
+function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
+    if (!payload.ok) {
+        return (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                    Não consegui ler a planilha agora. Verifique a conexão e tente de novo.
+                </p>
+                <Button variant="outline" className="mt-3" onClick={() => router.reload()}>
+                    Tentar de novo
+                </Button>
+            </div>
+        );
+    }
+
+    if (payload.items.length === 0) {
+        return (
+            <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
+                Nenhum agendamento no período.
+            </div>
+        );
+    }
+
+    const groups = payload.items.reduce<Record<string, { label: string; items: Appointment[] }>>(
+        (acc, item) => {
+            acc[item.date] ??= { label: item.date_label, items: [] };
+            acc[item.date].items.push(item);
+
+            return acc;
+        },
+        {},
+    );
+
+    return (
+        <div className="space-y-6">
+            {Object.entries(groups).map(([day, group]) => (
+                <div key={day}>
+                    <h2 className="mb-2 text-sm font-semibold capitalize text-muted-foreground">
+                        {group.label}
+                    </h2>
+                    <div className="space-y-2">
+                        {group.items.map((a, i) => (
+                            <div
+                                key={`${day}-${a.time}-${i}`}
+                                className="flex items-start gap-4 rounded-xl border bg-card p-4"
+                            >
+                                <div className="w-20 shrink-0 text-sm font-semibold text-primary">
+                                    {a.time}
+                                    <div className="text-xs font-normal text-muted-foreground">
+                                        {a.end_time}
+                                    </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium">{a.client || '—'}</p>
+                                    {a.service && (
+                                        <p className="text-sm text-muted-foreground">{a.service}</p>
+                                    )}
+                                    {a.notes && (
+                                        <p className="mt-1 text-xs text-muted-foreground">{a.notes}</p>
+                                    )}
+                                    {a.interested && (
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Interessadas: {a.interested}
+                                        </p>
+                                    )}
+                                </div>
+                                <span
+                                    className={cn(
+                                        'shrink-0 rounded-full px-3 py-1 text-xs font-medium',
+                                        statusClasses(a.status),
+                                    )}
+                                >
+                                    {a.status || '—'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export default function AgendaIndex({ period, date, appointments }: Props) {
+    const step = period === 'semana' ? 7 : 1;
+    const exportHref = `/agenda/exportar?period=${period}&date=${date}`;
+
+    return (
+        <>
+            <Head title="Agenda" />
+
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <ToggleGroup
+                        type="single"
+                        value={period}
+                        onValueChange={(value) => value && visit(value, date)}
+                        variant="outline"
+                    >
+                        <ToggleGroupItem value="dia">Dia</ToggleGroupItem>
+                        <ToggleGroupItem value="semana">Semana</ToggleGroupItem>
+                    </ToggleGroup>
+
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" onClick={() => visit(period, shiftISO(date, -step))}>
+                            <ChevronLeft className="size-4" />
+                        </Button>
+                        <Button variant="outline" onClick={() => visit(period, new Date().toISOString().slice(0, 10))}>
+                            Hoje
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => visit(period, shiftISO(date, step))}>
+                            <ChevronRight className="size-4" />
+                        </Button>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(event) => event.target.value && visit(period, event.target.value)}
+                            className="rounded-md border bg-background px-3 py-1.5 text-sm"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => visit(period, date, true)} title="Atualizar">
+                            <RefreshCw className="size-4" />
+                        </Button>
+                        <Button asChild>
+                            <a href={exportHref}>
+                                <Download className="mr-2 size-4" />
+                                Exportar PDF
+                            </a>
+                        </Button>
+                    </div>
+                </div>
+
+                <Deferred data="appointments" fallback={<AgendaSkeleton />}>
+                    <AppointmentList payload={appointments ?? { ok: true, items: [] }} />
+                </Deferred>
+            </div>
+        </>
+    );
+}
+
+AgendaIndex.layout = {
+    breadcrumbs: [{ title: 'Agenda', href: agenda() }],
+};
