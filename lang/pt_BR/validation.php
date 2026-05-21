@@ -1,0 +1,46 @@
+<?php
+
+return [
+    'accepted' => 'O campo :attribute deve ser aceito.',
+    'active_url' => 'O campo :attribute não é uma URL válida.',
+    'after' => 'O campo :attribute deve ser uma data posterior a :date.',
+    'alpha' => 'O campo :attribute deve conter apenas letras.',
+    'alpha_dash' => 'O campo :attribute deve conter apenas letras, números, hífens e sublinhados.',
+    'alpha_num' => 'O campo :attribute deve conter apenas letras e números.',
+    'array' => 'O campo :attribute deve ser um array.',
+    'before' => 'O campo :attribute deve ser uma data anterior a :date.',
+    'between' => [
+        'numeric' => 'O campo :attribute deve estar entre :min e :max.',
+        'file' => 'O campo :attribute deve ter entre :min e :max kilobytes.',
+        'string' => 'O campo :attribute deve ter entre :min e :max caracteres.',
+        'array' => 'O campo :attribute deve ter entre :min e :max itens.',
+    ],
+    'boolean' => 'O campo :attribute deve ser verdadeiro ou falso.',
+    'confirmed' => 'A confirmação do campo :attribute não corresponde.',
+    'current_password' => 'A senha está incorreta.',
+    'date' => 'O campo :attribute não é uma data válida.',
+    'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
+    'in' => 'O campo :attribute selecionado é inválido.',
+    'integer' => 'O campo :attribute deve ser um número inteiro.',
+    'max' => [
+        'numeric' => 'O campo :attribute não pode ser maior que :max.',
+        'file' => 'O campo :attribute não pode ter mais que :max kilobytes.',
+        'string' => 'O campo :attribute não pode ter mais que :max caracteres.',
+        'array' => 'O campo :attribute não pode ter mais que :max itens.',
+    ],
+    'min' => [
+        'numeric' => 'O campo :attribute deve ser pelo menos :min.',
+        'file' => 'O campo :attribute deve ter pelo menos :min kilobytes.',
+        'string' => 'O campo :attribute deve ter pelo menos :min caracteres.',
+        'array' => 'O campo :attribute deve ter pelo menos :min itens.',
+    ],
+    'required' => 'O campo :attribute é obrigatório.',
+    'string' => 'O campo :attribute deve ser um texto.',
+    'unique' => 'O campo :attribute já está em uso.',
+    'attributes' => [
+        'name' => 'nome',
+        'email' => 'e-mail',
+        'password' => 'senha',
+        'password_confirmation' => 'confirmação de senha',
+    ],
+];
