@@ -19,6 +19,6 @@ test('trocar de template nao gera erros', function () {
 
     $page = visit('/horarios');
 
-    $page->click('Dark Elegante')
+    $page->click('Roxo Profundo')
         ->assertNoSmoke();
 });

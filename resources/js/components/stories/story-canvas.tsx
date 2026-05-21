@@ -42,7 +42,7 @@ export function StoryCanvas({ template, data }: { template: TemplateTheme; data:
                     flexDirection: 'column',
                     alignItems: 'center',
                     height: '100%',
-                    padding: '120px 80px',
+                    padding: '160px 80px',
                 }}
             >
                 <h1

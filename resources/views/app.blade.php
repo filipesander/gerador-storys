@@ -34,6 +34,33 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @php
+            $ogTitle = 'Gerador de Stories — Stephanie';
+            $ogDescription = 'Crie stories de horários do seu salão em segundos. Digite os horários livres, escolha um template lilás e baixe pronto para o Instagram.';
+            $ogImage = asset('og-image.png');
+            $ogUrl = url()->current();
+        @endphp
+
+        <meta name="description" content="{{ $ogDescription }}">
+
+        {{-- Open Graph (WhatsApp, Facebook, etc.) --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="Gerador de Stories">
+        <meta property="og:locale" content="pt_BR">
+        <meta property="og:title" content="{{ $ogTitle }}">
+        <meta property="og:description" content="{{ $ogDescription }}">
+        <meta property="og:url" content="{{ $ogUrl }}">
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:type" content="image/png">
+
+        {{-- Twitter --}}
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $ogTitle }}">
+        <meta name="twitter:description" content="{{ $ogDescription }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
+
         @fonts
 
         @viteReactRefresh

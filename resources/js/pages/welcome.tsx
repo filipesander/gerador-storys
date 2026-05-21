@@ -53,7 +53,7 @@ const STEPS = [
 
 export default function Welcome() {
     const { auth } = usePage().props;
-    const heroTemplate = getTemplate('lavanda-floral');
+    const heroTemplate = getTemplate('lilas-floral');
     const currentYear = new Date().getFullYear();
 
     return (
@@ -204,7 +204,7 @@ export default function Welcome() {
                                         }}
                                     >
                                         <StoryCanvas
-                                            template={getTemplate('gradiente-vibrante')}
+                                            template={getTemplate('roxo-profundo')}
                                             data={DEMO_DATA}
                                         />
                                     </div>
