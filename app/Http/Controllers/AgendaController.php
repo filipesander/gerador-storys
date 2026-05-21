@@ -8,6 +8,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -51,6 +52,8 @@ class AgendaController extends Controller
         $grouped = $this->appointmentsInRange($start, $end, false)
             ->groupBy(fn (Appointment $a) => $a->date->toDateString());
 
+        $this->ensureFontCacheDirectoriesExist();
+
         $pdf = Pdf::loadView('pdf.agenda', [
             'brand' => config('agenda.brand', 'Thay'),
             'period' => $period,
@@ -63,6 +66,25 @@ class AgendaController extends Controller
         ]);
 
         return $pdf->download("agenda-{$period}-{$date->toDateString()}.pdf");
+    }
+
+    /**
+     * O DomPDF grava o cache de métricas das fontes em font_dir/font_cache
+     * (storage/fonts por padrão). Esse diretório é ignorado pelo git e não
+     * existe em deploys novos, o que fazia o export quebrar com 500 ao
+     * registrar a @font-face do PDF. Garantimos que os diretórios existam.
+     */
+    protected function ensureFontCacheDirectoriesExist(): void
+    {
+        $directories = array_unique(array_filter([
+            storage_path('fonts'),
+            config('dompdf.options.font_dir'),
+            config('dompdf.options.font_cache'),
+        ]));
+
+        foreach ($directories as $directory) {
+            File::ensureDirectoryExists($directory);
+        }
     }
 
     protected function resolveDate(string $value): CarbonImmutable

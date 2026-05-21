@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -30,4 +31,22 @@ test('exporta a agenda em PDF', function () {
 
     $response->assertOk();
     expect($response->headers->get('content-type'))->toContain('application/pdf');
+});
+
+test('exporta o PDF mesmo quando o diretório de fontes do dompdf não existe (deploy novo)', function () {
+    $freshFontDir = storage_path('framework/testing/dompdf-fonts-'.uniqid());
+    File::deleteDirectory($freshFontDir);
+
+    config([
+        'dompdf.options.font_dir' => $freshFontDir,
+        'dompdf.options.font_cache' => $freshFontDir,
+    ]);
+
+    $response = $this->actingAs(User::factory()->create())
+        ->get(route('agenda.exportar', ['period' => 'dia', 'date' => '2026-05-21']));
+
+    $response->assertOk();
+    expect($response->headers->get('content-type'))->toContain('application/pdf');
+
+    File::deleteDirectory($freshFontDir);
 });
