@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class AgendaImporter
 {
@@ -43,6 +44,18 @@ class AgendaImporter
     public function parse(string $csv): Collection
     {
         $lines = preg_split('/\r\n|\r|\n/', trim($csv)) ?: [];
+
+        if (count($lines) < 2) {
+            return collect();
+        }
+
+        $header = str_getcsv($lines[0], separator: ',', enclosure: '"', escape: '');
+
+        $columns = [];
+        foreach ($header as $index => $name) {
+            $columns[$this->normalizeHeader($name)] = $index;
+        }
+
         $appointments = collect();
 
         foreach ($lines as $index => $line) {
@@ -51,31 +64,44 @@ class AgendaImporter
             }
 
             $row = str_getcsv($line, separator: ',', enclosure: '"', escape: '');
-            $date = $this->parseDate($row[0] ?? '');
-            $time = trim($row[1] ?? '');
+
+            $get = function (string $key) use ($row, $columns): string {
+                $position = $columns[$key] ?? null;
+
+                return $position === null ? '' : trim($row[$position] ?? '');
+            };
+
+            $date = $this->parseDate($get('data'));
+            $time = $get('horario');
 
             if ($date === null || $time === '') {
                 continue;
             }
 
-            $duration = $this->durationToMinutes($row[2] ?? '');
+            $duration = $this->durationToMinutes($get('tempo do servico'));
 
             $appointments->push(new Appointment(
                 date: $date,
                 time: $time,
                 durationMinutes: $duration,
                 endTime: $this->addMinutes($time, $duration),
-                client: trim($row[3] ?? ''),
-                service: trim($row[4] ?? ''),
-                status: trim($row[5] ?? ''),
-                notes: trim($row[6] ?? ''),
-                interested: trim($row[7] ?? ''),
+                client: $get('clientes'),
+                service: $get('servico'),
+                status: $get('status'),
+                type: $get('aplicacao ou manutencao'),
+                notes: $get('observacoes'),
+                interested: $get('clientes interessadas'),
             ));
         }
 
         return $appointments
             ->sortBy(fn (Appointment $a) => $a->date->toDateString().' '.$a->time)
             ->values();
+    }
+
+    private function normalizeHeader(string $value): string
+    {
+        return Str::ascii(trim(mb_strtolower($value)));
     }
 
     private function parseDate(string $value): ?CarbonImmutable

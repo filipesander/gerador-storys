@@ -18,6 +18,7 @@ final readonly class Appointment implements Arrayable
         public string $client,
         public string $service,
         public string $status,
+        public string $type,
         public string $notes,
         public string $interested,
     ) {}
@@ -36,6 +37,7 @@ final readonly class Appointment implements Arrayable
             'client' => $this->client,
             'service' => $this->service,
             'status' => $this->status,
+            'type' => $this->type,
             'notes' => $this->notes,
             'interested' => $this->interested,
         ];

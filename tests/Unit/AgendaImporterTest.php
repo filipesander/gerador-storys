@@ -35,3 +35,25 @@ it('parseia o CSV em appointments, ignorando linhas vazias e inválidas', functi
         ->and($jhessy->notes)->toBe('obs')
         ->and($jhessy->interested)->toBe('Maria');
 });
+
+it('mapeia colunas pelo cabeçalho e lê Aplicação/Manutenção mesmo inserida no meio', function () {
+    $csv = implode("\n", [
+        '"Data","Horário","Tempo do serviço","Clientes","Serviço ","Status","Aplicação ou Manutenção","Clientes interessadas"',
+        '"21/05/2026","08:00","1:30:00","Virna Santana","Volume Inglês 5D","Confirmado","Aplicação","Bia"',
+        '"22/05/2026","13:30","2:00:00","Jhessy","Brasileiro","A confirmar","Manutenção",""',
+        '"lixo","x","","","","","",""',
+    ]);
+
+    $appointments = (new AgendaImporter)->parse($csv);
+
+    expect($appointments)->toHaveCount(2);
+
+    $virna = $appointments->firstWhere('client', 'Virna Santana');
+    expect($virna->type)->toBe('Aplicação')
+        ->and($virna->service)->toBe('Volume Inglês 5D') // lido apesar do espaço em "Serviço "
+        ->and($virna->interested)->toBe('Bia')
+        ->and($virna->notes)->toBe(''); // não há coluna "Observações"
+
+    $jhessy = $appointments->firstWhere('client', 'Jhessy');
+    expect($jhessy->type)->toBe('Manutenção');
+});

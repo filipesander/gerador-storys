@@ -15,6 +15,7 @@ type Appointment = {
     client: string;
     service: string;
     status: string;
+    type: string;
     notes: string;
     interested: string;
 };
@@ -52,6 +53,20 @@ function statusClasses(status: string): string {
 
     if (s.startsWith('a confirmar') || s.includes('confirmar')) {
         return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
+    }
+
+    return 'bg-muted text-muted-foreground';
+}
+
+function typeClasses(type: string): string {
+    const t = type.toLowerCase();
+
+    if (t.includes('aplica')) {
+        return 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300';
+    }
+
+    if (t.includes('manuten')) {
+        return 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300';
     }
 
     return 'bg-muted text-muted-foreground';
@@ -120,8 +135,22 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="font-medium">{a.client || '—'}</p>
-                                    {a.service && (
-                                        <p className="text-sm text-muted-foreground">{a.service}</p>
+                                    {(a.service || a.type) && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {a.service && (
+                                                <p className="text-sm text-muted-foreground">{a.service}</p>
+                                            )}
+                                            {a.type && (
+                                                <span
+                                                    className={cn(
+                                                        'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                                                        typeClasses(a.type),
+                                                    )}
+                                                >
+                                                    {a.type}
+                                                </span>
+                                            )}
+                                        </div>
                                     )}
                                     {a.notes && (
                                         <p className="mt-1 text-xs text-muted-foreground">{a.notes}</p>

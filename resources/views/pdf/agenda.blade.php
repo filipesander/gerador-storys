@@ -61,6 +61,8 @@
         .pill-ok { background-color: #dcfce7; color: #15803d; }
         .pill-wait { background-color: #fef3c7; color: #b45309; }
         .pill-neutral { background-color: #efeaf7; color: #6b7280; }
+        .pill-aplic { background-color: #ede9fe; color: #6d28d9; }
+        .pill-manut { background-color: #e0f2fe; color: #0369a1; }
 
         .empty { color: #9b8bbf; font-style: italic; text-align: center; margin-top: 60px; }
     </style>
@@ -97,7 +99,7 @@
                         <th>Serviço</th>
                         <th style="width: 58px;">Duração</th>
                         <th style="width: 96px;">Status</th>
-                        <th>Observações</th>
+                        <th style="width: 120px;">Tipo</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,7 +115,14 @@
                                     {{ $a->status ?: '—' }}
                                 </span>
                             </td>
-                            <td class="muted">{{ $a->notes }}</td>
+                            <td>
+                                @if ($a->type !== '')
+                                    @php($t = mb_strtolower($a->type))
+                                    <span class="pill {{ str_contains($t, 'aplica') ? 'pill-aplic' : (str_contains($t, 'manuten') ? 'pill-manut' : 'pill-neutral') }}">
+                                        {{ $a->type }}
+                                    </span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
