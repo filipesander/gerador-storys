@@ -52,10 +52,14 @@ class AgendaController extends Controller
             ->groupBy(fn (Appointment $a) => $a->date->toDateString());
 
         $pdf = Pdf::loadView('pdf.agenda', [
+            'brand' => config('agenda.brand', 'Thay'),
             'period' => $period,
             'start' => $start,
             'end' => $end,
             'grouped' => $grouped,
+            'total' => $grouped->sum(fn (Collection $items) => $items->count()),
+            'generatedAt' => CarbonImmutable::now(),
+            'playfairPath' => resource_path('fonts/playfair-display.ttf'),
         ]);
 
         return $pdf->download("agenda-{$period}-{$date->toDateString()}.pdf");
