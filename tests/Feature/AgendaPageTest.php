@@ -33,6 +33,16 @@ test('exporta a agenda em PDF', function () {
     expect($response->headers->get('content-type'))->toContain('application/pdf');
 });
 
+test('exporta o PDF mesmo quando a planilha do Google está indisponível', function () {
+    Http::fake(['docs.google.com/*' => Http::response('erro', 500)]);
+
+    $response = $this->actingAs(User::factory()->create())
+        ->get(route('agenda.exportar', ['period' => 'dia', 'date' => '2026-05-21']));
+
+    $response->assertOk();
+    expect($response->headers->get('content-type'))->toContain('application/pdf');
+});
+
 test('exporta o PDF mesmo quando o diretório de fontes do dompdf não existe (deploy novo)', function () {
     $freshFontDir = storage_path('framework/testing/dompdf-fonts-'.uniqid());
     File::deleteDirectory($freshFontDir);

@@ -49,8 +49,13 @@ class AgendaController extends Controller
         $date = $this->resolveDate($request->string('date')->toString());
         [$start, $end] = $this->range($period, $date);
 
-        $grouped = $this->appointmentsInRange($start, $end, false)
-            ->groupBy(fn (Appointment $a) => $a->date->toDateString());
+        try {
+            $appointments = $this->appointmentsInRange($start, $end, false);
+        } catch (\Throwable) {
+            $appointments = collect();
+        }
+
+        $grouped = $appointments->groupBy(fn (Appointment $a) => $a->date->toDateString());
 
         $this->ensureFontCacheDirectoriesExist();
 
