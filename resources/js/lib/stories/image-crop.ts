@@ -104,3 +104,14 @@ export async function cropToStoryDataUrl(src: string, area: CropAreaPixels): Pro
 
     return canvas.toDataURL('image/jpeg', 0.85);
 }
+
+/**
+ * Converte um data URL (gerado pelo recorte) em {@see File}, para envio
+ * multipart ao servidor. Use apenas com data URLs — URLs http (imagem já
+ * salva) não precisam ser reenviadas.
+ */
+export async function dataUrlToFile(dataUrl: string, filename = 'story.jpg'): Promise<File> {
+    const blob = await (await fetch(dataUrl)).blob();
+
+    return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+}
