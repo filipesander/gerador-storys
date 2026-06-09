@@ -47,6 +47,14 @@ export function createDaySlot(weekday: Weekday): DaySlot {
     return { id: crypto.randomUUID(), weekday, times: [] };
 }
 
+/**
+ * Ordena os slots na ordem da semana (segunda → domingo),
+ * independente da ordem em que foram adicionados.
+ */
+export function sortSlotsByWeekday(slots: DaySlot[]): DaySlot[] {
+    return [...slots].sort((a, b) => WEEKDAYS.indexOf(a.weekday) - WEEKDAYS.indexOf(b.weekday));
+}
+
 export function createDefaultStoryData(): StoryData {
     return {
         mode: 'semana',
@@ -55,6 +63,54 @@ export function createDefaultStoryData(): StoryData {
         date: new Date().toISOString().slice(0, 10),
         dayTimes: ['08:00'],
     };
+}
+
+const STORAGE_KEY = 'gerador-stories:data';
+
+/**
+ * Lê os dados salvos no localStorage, validando o formato.
+ * Retorna os dados padrão quando não há nada salvo ou o conteúdo é inválido.
+ */
+export function loadStoredStoryData(): StoryData {
+    if (typeof window === 'undefined') {
+        return createDefaultStoryData();
+    }
+
+    try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+
+        if (!raw) {
+            return createDefaultStoryData();
+        }
+
+        const parsed = JSON.parse(raw) as Partial<StoryData>;
+        const fallback = createDefaultStoryData();
+
+        return {
+            mode: parsed.mode === 'dia' ? 'dia' : 'semana',
+            title: typeof parsed.title === 'string' ? parsed.title : fallback.title,
+            weekSlots: Array.isArray(parsed.weekSlots) ? parsed.weekSlots : fallback.weekSlots,
+            date: typeof parsed.date === 'string' ? parsed.date : fallback.date,
+            dayTimes: Array.isArray(parsed.dayTimes) ? parsed.dayTimes : fallback.dayTimes,
+        };
+    } catch {
+        return createDefaultStoryData();
+    }
+}
+
+/**
+ * Persiste os dados do story no localStorage.
+ */
+export function saveStoredStoryData(data: StoryData): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+        // Ignora falhas de quota/modo privado — persistência é best-effort.
+    }
 }
 
 /**

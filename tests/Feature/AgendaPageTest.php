@@ -25,6 +25,15 @@ test('usuário autenticado vê a agenda', function () {
         ->assertInertia(fn (Assert $page) => $page->component('agenda/index'));
 });
 
+test('a página expõe a marca para o export PNG no client', function () {
+    config(['agenda.brand' => 'Thay']);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('agenda'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('brand', 'Thay'));
+});
+
 test('exporta a agenda em PDF', function () {
     $response = $this->actingAs(User::factory()->create())
         ->get(route('agenda.exportar', ['period' => 'dia', 'date' => '2026-05-21']));

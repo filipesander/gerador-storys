@@ -25,6 +25,7 @@ class AgendaController extends Controller
         [$start, $end] = $this->range($period, $date);
 
         return Inertia::render('agenda/index', [
+            'brand' => config('agenda.brand', 'Thay'),
             'period' => $period,
             'date' => $date->toDateString(),
             'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],

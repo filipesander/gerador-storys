@@ -1,5 +1,7 @@
-import { X } from 'lucide-react';
-import { useState } from 'react';
+import { ImagePlus, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { ImageCropDialog } from '@/components/stories/image-crop-dialog';
 import { TemplatePicker } from '@/components/stories/template-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,18 +10,21 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
+    ACCEPTED_IMAGE_ACCEPT,
+    loadImageFromFile,
+    validateImageDimensions,
+    validateImageFile,
+} from '@/lib/stories/image-crop';
+import {
     createDaySlot,
     defaultTitleForMode,
     normalizeTime,
+    sortSlotsByWeekday,
     WEEKDAYS,
-    WEEKDAY_LABELS
-    
-    
-    
-    
+    WEEKDAY_LABELS,
 } from '@/lib/stories/story-data';
 import type {DaySlot, StoryData, StoryMode, Weekday} from '@/lib/stories/story-data';
-import { TEMPLATES } from '@/lib/stories/templates';
+import type { CustomTemplate, TemplateTheme, TextMode } from '@/lib/stories/templates';
 
 function TimesEditor({ times, onChange }: { times: string[]; onChange: (times: string[]) => void }) {
     const [draft, setDraft] = useState('');
@@ -73,26 +78,76 @@ export function StoryForm({
     onChange,
     templateId,
     onTemplateChange,
+    templates,
+    customTemplate,
+    onCustomTemplateChange,
+    onRemoveCustomTemplate,
 }: {
     data: StoryData;
     onChange: (patch: Partial<StoryData>) => void;
     templateId: string;
     onTemplateChange: (id: string) => void;
+    templates: TemplateTheme[];
+    customTemplate: CustomTemplate | null;
+    onCustomTemplateChange: (custom: CustomTemplate) => void;
+    onRemoveCustomTemplate: () => void;
 }) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+
+        if (!file) {
+            return;
+        }
+
+        const fileError = validateImageFile(file);
+
+        if (fileError) {
+            toast.error(fileError);
+
+            return;
+        }
+
+        try {
+            const loaded = await loadImageFromFile(file);
+            const dimensionError = validateImageDimensions(loaded);
+
+            if (dimensionError) {
+                toast.error(dimensionError);
+
+                return;
+            }
+
+            setCropSrc(loaded.src);
+        } catch {
+            toast.error('Não foi possível abrir a imagem.');
+        }
+    };
+
+    const handleCropConfirm = (dataUrl: string, textMode: TextMode) => {
+        onCustomTemplateChange({ image: dataUrl, textMode });
+        setCropSrc(null);
+    };
+
     const setMode = (mode: StoryMode) => {
         onChange({ mode, title: defaultTitleForMode(mode) });
     };
 
     const updateSlot = (id: string, patch: Partial<DaySlot>) => {
         onChange({
-            weekSlots: data.weekSlots.map((slot) => (slot.id === id ? { ...slot, ...patch } : slot)),
+            weekSlots: sortSlotsByWeekday(
+                data.weekSlots.map((slot) => (slot.id === id ? { ...slot, ...patch } : slot)),
+            ),
         });
     };
 
     const addSlot = () => {
         const used = new Set(data.weekSlots.map((slot) => slot.weekday));
         const next = WEEKDAYS.find((weekday) => !used.has(weekday)) ?? 'segunda';
-        onChange({ weekSlots: [...data.weekSlots, createDaySlot(next)] });
+        onChange({ weekSlots: sortSlotsByWeekday([...data.weekSlots, createDaySlot(next)]) });
     };
 
     const removeSlot = (id: string) => {
@@ -122,7 +177,7 @@ export function StoryForm({
 
             {data.mode === 'semana' ? (
                 <div className="space-y-3">
-                    {data.weekSlots.map((slot) => (
+                    {sortSlotsByWeekday(data.weekSlots).map((slot) => (
                         <Card key={slot.id}>
                             <CardContent className="space-y-3 p-4">
                                 <div className="flex items-center justify-between gap-2">
@@ -171,10 +226,67 @@ export function StoryForm({
                 </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-3">
                 <Label>Template</Label>
-                <TemplatePicker templates={TEMPLATES} value={templateId} onChange={onTemplateChange} data={data} />
+                <TemplatePicker templates={templates} value={templateId} onChange={onTemplateChange} data={data} />
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPTED_IMAGE_ACCEPT}
+                    className="hidden"
+                    onChange={handleFileChange}
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <ImagePlus className="mr-2 size-4" />
+                        {customTemplate ? 'Trocar imagem' : 'Enviar imagem'}
+                    </Button>
+
+                    {customTemplate && (
+                        <>
+                            <ToggleGroup
+                                type="single"
+                                value={customTemplate.textMode}
+                                onValueChange={(value) =>
+                                    value &&
+                                    onCustomTemplateChange({
+                                        ...customTemplate,
+                                        textMode: value as TextMode,
+                                    })
+                                }
+                                variant="outline"
+                                size="sm"
+                            >
+                                <ToggleGroupItem value="dark">Texto escuro</ToggleGroupItem>
+                                <ToggleGroupItem value="light">Texto claro</ToggleGroupItem>
+                            </ToggleGroup>
+
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={onRemoveCustomTemplate}
+                            >
+                                Remover
+                            </Button>
+                        </>
+                    )}
+                </div>
             </div>
+
+            <ImageCropDialog
+                imageSrc={cropSrc}
+                initialTextMode={customTemplate?.textMode ?? 'dark'}
+                onCancel={() => setCropSrc(null)}
+                onConfirm={handleCropConfirm}
+            />
         </div>
     );
 }

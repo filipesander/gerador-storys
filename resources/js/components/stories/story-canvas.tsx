@@ -1,6 +1,6 @@
 import { DayCard } from '@/components/stories/day-card';
 import { Decoration } from '@/components/stories/decorations';
-import { WEEKDAY_LABELS  } from '@/lib/stories/story-data';
+import { sortSlotsByWeekday, WEEKDAY_LABELS } from '@/lib/stories/story-data';
 import type {StoryData} from '@/lib/stories/story-data';
 import type { TemplateTheme } from '@/lib/stories/templates';
 
@@ -19,7 +19,7 @@ function formatDate(iso: string): string {
 
 export function StoryCanvas({ template, data }: { template: TemplateTheme; data: StoryData }) {
     const { palette, fonts } = template;
-    const weekCards = data.weekSlots.filter((slot) => slot.times.length > 0);
+    const weekCards = sortSlotsByWeekday(data.weekSlots).filter((slot) => slot.times.length > 0);
 
     return (
         <div

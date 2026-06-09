@@ -1,8 +1,22 @@
 import { Deferred, Head, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    ImageDown,
+    Loader2,
+    RefreshCw,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import AgendaExportSheet from '@/components/agenda/agenda-export-sheet';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+    buildAgendaFilename,
+    exportAgendaToPng,
+} from '@/lib/agenda/export-png';
 import { cn } from '@/lib/utils';
 import { agenda } from '@/routes';
 
@@ -23,6 +37,7 @@ type Appointment = {
 type AppointmentsPayload = { ok: boolean; items: Appointment[] };
 
 type Props = {
+    brand: string;
     period: 'dia' | 'semana';
     date: string;
     range: { start: string; end: string };
@@ -87,9 +102,14 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
         return (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
                 <p className="text-sm text-muted-foreground">
-                    Não consegui ler a planilha agora. Verifique a conexão e tente de novo.
+                    Não consegui ler a planilha agora. Verifique a conexão e
+                    tente de novo.
                 </p>
-                <Button variant="outline" className="mt-3" onClick={() => router.reload()}>
+                <Button
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => router.reload()}
+                >
                     Tentar de novo
                 </Button>
             </div>
@@ -104,21 +124,20 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
         );
     }
 
-    const groups = payload.items.reduce<Record<string, { label: string; items: Appointment[] }>>(
-        (acc, item) => {
-            acc[item.date] ??= { label: item.date_label, items: [] };
-            acc[item.date].items.push(item);
+    const groups = payload.items.reduce<
+        Record<string, { label: string; items: Appointment[] }>
+    >((acc, item) => {
+        acc[item.date] ??= { label: item.date_label, items: [] };
+        acc[item.date].items.push(item);
 
-            return acc;
-        },
-        {},
-    );
+        return acc;
+    }, {});
 
     return (
         <div className="space-y-6">
             {Object.entries(groups).map(([day, group]) => (
                 <div key={day}>
-                    <h2 className="mb-2 text-sm font-semibold capitalize text-muted-foreground">
+                    <h2 className="mb-2 text-sm font-semibold text-muted-foreground capitalize">
                         {group.label}
                     </h2>
                     <div className="space-y-2">
@@ -134,11 +153,15 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
                                     </div>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="font-medium">{a.client || '—'}</p>
+                                    <p className="font-medium">
+                                        {a.client || '—'}
+                                    </p>
                                     {(a.service || a.type) && (
                                         <div className="flex flex-wrap items-center gap-2">
                                             {a.service && (
-                                                <p className="text-sm text-muted-foreground">{a.service}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {a.service}
+                                                </p>
                                             )}
                                             {a.type && (
                                                 <span
@@ -153,7 +176,9 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
                                         </div>
                                     )}
                                     {a.notes && (
-                                        <p className="mt-1 text-xs text-muted-foreground">{a.notes}</p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {a.notes}
+                                        </p>
                                     )}
                                     {a.interested && (
                                         <p className="mt-1 text-xs text-muted-foreground">
@@ -178,9 +203,39 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
     );
 }
 
-export default function AgendaIndex({ period, date, appointments }: Props) {
+export default function AgendaIndex({
+    brand,
+    period,
+    date,
+    range,
+    appointments,
+}: Props) {
     const step = period === 'semana' ? 7 : 1;
     const exportHref = `/agenda/exportar?period=${period}&date=${date}`;
+
+    const exportRef = useRef<HTMLDivElement>(null);
+    const [exportingPng, setExportingPng] = useState(false);
+    const items = appointments?.ok ? appointments.items : [];
+    const canExportPng = (appointments?.ok ?? false) && items.length > 0;
+
+    async function handleExportPng() {
+        if (!exportRef.current || exportingPng) {
+            return;
+        }
+
+        setExportingPng(true);
+
+        try {
+            await exportAgendaToPng(
+                exportRef.current,
+                buildAgendaFilename(period, date),
+            );
+        } catch {
+            toast.error('Não consegui gerar o PNG. Tente de novo.');
+        } finally {
+            setExportingPng(false);
+        }
+    }
 
     return (
         <>
@@ -199,26 +254,63 @@ export default function AgendaIndex({ period, date, appointments }: Props) {
                     </ToggleGroup>
 
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" onClick={() => visit(period, shiftISO(date, -step))}>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => visit(period, shiftISO(date, -step))}
+                        >
                             <ChevronLeft className="size-4" />
                         </Button>
-                        <Button variant="outline" onClick={() => visit(period, new Date().toISOString().slice(0, 10))}>
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                visit(
+                                    period,
+                                    new Date().toISOString().slice(0, 10),
+                                )
+                            }
+                        >
                             Hoje
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => visit(period, shiftISO(date, step))}>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => visit(period, shiftISO(date, step))}
+                        >
                             <ChevronRight className="size-4" />
                         </Button>
                         <input
                             type="date"
                             value={date}
-                            onChange={(event) => event.target.value && visit(period, event.target.value)}
+                            onChange={(event) =>
+                                event.target.value &&
+                                visit(period, event.target.value)
+                            }
                             className="rounded-md border bg-background px-3 py-1.5 text-sm"
                         />
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => visit(period, date, true)} title="Atualizar">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => visit(period, date, true)}
+                            title="Atualizar"
+                        >
                             <RefreshCw className="size-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleExportPng}
+                            disabled={!canExportPng || exportingPng}
+                            title="Baixar imagem PNG"
+                        >
+                            {exportingPng ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : (
+                                <ImageDown className="mr-2 size-4" />
+                            )}
+                            Exportar PNG
                         </Button>
                         <Button asChild>
                             <a href={exportHref}>
@@ -230,8 +322,24 @@ export default function AgendaIndex({ period, date, appointments }: Props) {
                 </div>
 
                 <Deferred data="appointments" fallback={<AgendaSkeleton />}>
-                    <AppointmentList payload={appointments ?? { ok: true, items: [] }} />
+                    <AppointmentList
+                        payload={appointments ?? { ok: true, items: [] }}
+                    />
                 </Deferred>
+            </div>
+
+            <div
+                aria-hidden
+                className="pointer-events-none fixed top-0 -left-[10000px] -z-10 opacity-0"
+            >
+                <AgendaExportSheet
+                    ref={exportRef}
+                    brand={brand}
+                    period={period}
+                    range={range}
+                    items={items}
+                    generatedAt={new Date()}
+                />
             </div>
         </>
     );
