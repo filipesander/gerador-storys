@@ -7,8 +7,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $csv = implode("\n", [
-        '"Data","Horário","Tempo do serviço","Clientes","Serviço","Status","Observações","Clientes interessadas"',
-        '"21/05/2026","08:00","1:30:00","Virna Santana","Volume Inglês 5D","Confirmado","",""',
+        '"Data","Horário","Tempo do serviço","Clientes","Serviço","Local","Status","Observações","Clientes interessadas"',
+        '"21/05/2026","08:00","1:30:00","Virna Santana","Volume Inglês 5D","Studio Casa","Confirmado","",""',
     ]);
 
     Http::fake(['docs.google.com/*' => Http::response($csv, 200, ['Content-Type' => 'text/csv'])]);

@@ -32,6 +32,7 @@ type Appointment = {
     type: string;
     notes: string;
     interested: string;
+    location: string;
 };
 
 type AppointmentsPayload = { ok: boolean; items: Appointment[] };
@@ -173,6 +174,11 @@ function AppointmentList({
                                 <div className="min-w-0 flex-1">
                                     <p className="font-medium">
                                         {a.client || '—'}
+                                        {a.location && (
+                                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                                · {a.location}
+                                            </span>
+                                        )}
                                     </p>
                                     {(a.service || a.type) && (
                                         <div className="flex flex-wrap items-center gap-2">

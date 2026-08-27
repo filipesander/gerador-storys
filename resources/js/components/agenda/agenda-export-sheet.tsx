@@ -12,6 +12,7 @@ type Appointment = {
     type: string;
     notes: string;
     interested: string;
+    location: string;
 };
 
 type Props = {
@@ -81,6 +82,7 @@ const CSS = `
 .agenda-export .ax-time { color: #6d28d9; font-weight: bold; white-space: nowrap; }
 .agenda-export .ax-time .ax-end { color: #b3a6d1; font-weight: normal; }
 .agenda-export .ax-client { font-weight: bold; }
+.agenda-export .ax-where { color: #9b8bbf; font-weight: normal; font-size: 9px; margin-top: 1px; }
 .agenda-export .ax-muted { color: #9b8bbf; }
 .agenda-export .ax-pill { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 9px; font-weight: bold; white-space: nowrap; }
 .agenda-export .ax-pill-ok { background-color: #dcfce7; color: #15803d; }
@@ -180,6 +182,11 @@ const AgendaExportSheet = forwardRef<HTMLDivElement, Props>(
                                                 </td>
                                                 <td className="ax-client">
                                                     {a.client || '—'}
+                                                    {a.location && (
+                                                        <div className="ax-where">
+                                                            {a.location}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td>{a.service || '—'}</td>
                                                 <td className="ax-muted">

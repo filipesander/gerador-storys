@@ -101,6 +101,7 @@ class AgendaImporter
                 type: $get('aplicacao ou manutencao'),
                 notes: $get('observacoes'),
                 interested: $get('clientes interessadas'),
+                location: $get('local'),
             ));
         }
 

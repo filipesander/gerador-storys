@@ -21,6 +21,7 @@ final readonly class Appointment implements Arrayable
         public string $type,
         public string $notes,
         public string $interested,
+        public string $location = '',
     ) {}
 
     /**
@@ -40,6 +41,7 @@ final readonly class Appointment implements Arrayable
             'type' => $this->type,
             'notes' => $this->notes,
             'interested' => $this->interested,
+            'location' => $this->location,
         ];
     }
 }

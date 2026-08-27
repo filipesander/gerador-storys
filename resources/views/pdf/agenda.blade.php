@@ -55,6 +55,7 @@
         .time { color: #6d28d9; font-weight: bold; white-space: nowrap; }
         .time .end { color: #b3a6d1; font-weight: normal; }
         .client { font-weight: bold; }
+        .client .where { color: #9b8bbf; font-weight: normal; font-size: 9px; }
         .muted { color: #9b8bbf; }
 
         .pill { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 9px; font-weight: bold; white-space: nowrap; }
@@ -106,7 +107,12 @@
                     @foreach ($items as $i => $a)
                         <tr class="{{ $i % 2 === 1 ? 'alt' : '' }}">
                             <td class="time">{{ $a->time }} <span class="end">– {{ $a->endTime }}</span></td>
-                            <td class="client">{{ $a->client ?: '—' }}</td>
+                            <td class="client">
+                                {{ $a->client ?: '—' }}
+                                @if ($a->location !== '')
+                                    <div class="where">{{ $a->location }}</div>
+                                @endif
+                            </td>
                             <td>{{ $a->service ?: '—' }}</td>
                             <td class="muted">{{ $a->durationMinutes }} min</td>
                             <td>

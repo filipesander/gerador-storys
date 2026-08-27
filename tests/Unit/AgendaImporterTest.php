@@ -58,3 +58,30 @@ it('mapeia colunas pelo cabeçalho e lê Aplicação/Manutenção mesmo inserida
     $jhessy = $appointments->firstWhere('client', 'Jhessy');
     expect($jhessy->type)->toBe('Manutenção');
 });
+
+it('lê a coluna Local, que só existe em algumas planilhas', function () {
+    $csv = implode("\n", [
+        '"Data","Horário","Tempo do serviço","Clientes","Serviço ","Local","Status","Aplicação ou Manutenção"',
+        '"27/08/2026","14:00","3:00:00","Thais Monteiro","Volume Inglês Marrom, Henna","Studio Casa","Confirmado","Aplicação"',
+        '"28/08/2026","14:00","1:00:00","Rosa","Remoção","Studio Thay","",""',
+    ]);
+
+    $appointments = (new AgendaImporter(new SheetTabResolver))->parse($csv);
+
+    $thais = $appointments->firstWhere('client', 'Thais Monteiro');
+    expect($thais->location)->toBe('Studio Casa')
+        ->and($thais->service)->toBe('Volume Inglês Marrom, Henna') // vírgula dentro do campo
+        ->and($appointments->firstWhere('client', 'Rosa')->location)->toBe('Studio Thay');
+});
+
+it('deixa o local vazio quando a planilha não tem a coluna', function () {
+    $csv = implode("\n", [
+        '"Data","Horário","Tempo do serviço","Clientes","Serviço","Status"',
+        '"27/08/2026","10:00","1:30:00","Vanessa Vieira","Volume Egípcio 3D","Confirmado"',
+    ]);
+
+    $appointment = (new AgendaImporter(new SheetTabResolver))->parse($csv)->first();
+
+    expect($appointment->location)->toBe('')
+        ->and($appointment->toArray())->toHaveKey('location');
+});
