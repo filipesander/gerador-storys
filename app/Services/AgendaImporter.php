@@ -3,39 +3,49 @@
 namespace App\Services;
 
 use App\Support\Appointment;
+use App\Support\Professional;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 class AgendaImporter
 {
-    public function url(): string
-    {
-        $id = config('agenda.sheet_id');
-        $gid = config('agenda.sheet_gid');
+    public function __construct(private SheetTabResolver $tabs) {}
 
-        return "https://docs.google.com/spreadsheets/d/{$id}/gviz/tq?tqx=out:csv&gid={$gid}";
+    /**
+     * URL do CSV da aba de agendamentos da profissional. Quando o gid não está
+     * fixado na configuração, ele é descoberto a partir das abas da planilha.
+     */
+    public function url(Professional $professional, bool $refresh = false): string
+    {
+        $gid = $professional->sheetGid
+            ?? $this->tabs->resolveAgendaGid($professional->sheetId, $refresh);
+
+        return $this->tabs->csvUrl($professional->sheetId, $gid);
     }
 
-    public function fetch(bool $refresh = false): string
+    public function fetch(Professional $professional, bool $refresh = false): string
     {
+        $cacheKey = "agenda.csv.{$professional->key}";
+
         if ($refresh) {
-            Cache::forget('agenda.csv');
+            Cache::forget($cacheKey);
         }
 
-        return Cache::remember('agenda.csv', (int) config('agenda.cache_seconds', 60), function (): string {
-            return Http::timeout(15)->get($this->url())->throw()->body();
-        });
+        return Cache::remember(
+            $cacheKey,
+            (int) config('agenda.cache_seconds', 60),
+            fn (): string => Http::timeout(15)->get($this->url($professional, $refresh))->throw()->body(),
+        );
     }
 
     /**
      * @return Collection<int, Appointment>
      */
-    public function all(bool $refresh = false): Collection
+    public function all(Professional $professional, bool $refresh = false): Collection
     {
-        return $this->parse($this->fetch($refresh));
+        return $this->parse($this->fetch($professional, $refresh));
     }
 
     /**
@@ -101,7 +111,7 @@ class AgendaImporter
 
     private function normalizeHeader(string $value): string
     {
-        return Str::ascii(trim(mb_strtolower($value)));
+        return SheetTabResolver::normalizeHeader($value);
     }
 
     private function parseDate(string $value): ?CarbonImmutable

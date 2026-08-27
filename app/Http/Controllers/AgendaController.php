@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\AgendaImporter;
+use App\Services\ProfessionalRegistry;
 use App\Support\Appointment;
+use App\Support\Professional;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -15,23 +17,38 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class AgendaController extends Controller
 {
-    public function __construct(private AgendaImporter $importer) {}
+    /**
+     * Chave de sessão que lembra a última profissional escolhida, para que
+     * voltar à agenda pelo menu não jogue de volta para a padrão.
+     */
+    private const SESSION_KEY = 'agenda.professional';
+
+    public function __construct(
+        private AgendaImporter $importer,
+        private ProfessionalRegistry $professionals,
+    ) {}
 
     public function index(Request $request): Response
     {
+        $professional = $this->resolveProfessional($request);
         $period = $request->string('period')->toString() === 'semana' ? 'semana' : 'dia';
         $date = $this->resolveDate($request->string('date')->toString());
         $refresh = $request->boolean('refresh');
         [$start, $end] = $this->range($period, $date);
 
         return Inertia::render('agenda/index', [
-            'brand' => config('agenda.brand', 'Thay'),
+            'brand' => $professional->label,
+            'professional' => $professional->key,
+            'professionals' => $this->professionals->all()
+                ->map(fn (Professional $p) => $p->toArray())
+                ->values()
+                ->all(),
             'period' => $period,
             'date' => $date->toDateString(),
             'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
-            'appointments' => Inertia::defer(function () use ($start, $end, $refresh): array {
+            'appointments' => Inertia::defer(function () use ($professional, $start, $end, $refresh): array {
                 try {
-                    $items = $this->appointmentsInRange($start, $end, $refresh)
+                    $items = $this->appointmentsInRange($professional, $start, $end, $refresh)
                         ->map(fn (Appointment $a) => $a->toArray())
                         ->values()
                         ->all();
@@ -46,12 +63,13 @@ class AgendaController extends Controller
 
     public function export(Request $request): HttpResponse
     {
+        $professional = $this->resolveProfessional($request);
         $period = $request->string('period')->toString() === 'semana' ? 'semana' : 'dia';
         $date = $this->resolveDate($request->string('date')->toString());
         [$start, $end] = $this->range($period, $date);
 
         try {
-            $appointments = $this->appointmentsInRange($start, $end, false);
+            $appointments = $this->appointmentsInRange($professional, $start, $end, false);
         } catch (\Throwable) {
             $appointments = collect();
         }
@@ -61,7 +79,7 @@ class AgendaController extends Controller
         $this->ensureFontCacheDirectoriesExist();
 
         $pdf = Pdf::loadView('pdf.agenda', [
-            'brand' => config('agenda.brand', 'Thay'),
+            'brand' => $professional->label,
             'period' => $period,
             'start' => $start,
             'end' => $end,
@@ -71,7 +89,23 @@ class AgendaController extends Controller
             'playfairPath' => resource_path('fonts/playfair-display.ttf'),
         ]);
 
-        return $pdf->download("agenda-{$period}-{$date->toDateString()}.pdf");
+        return $pdf->download("agenda-{$professional->key}-{$period}-{$date->toDateString()}.pdf");
+    }
+
+    /**
+     * A profissional vem da query string; sem ela, usamos a última escolhida
+     * na sessão e, por fim, a padrão da configuração.
+     */
+    protected function resolveProfessional(Request $request): Professional
+    {
+        $requested = $request->string('professional')->toString();
+
+        $professional = $this->professionals->find($requested)
+            ?? $this->professionals->resolve($request->session()->get(self::SESSION_KEY));
+
+        $request->session()->put(self::SESSION_KEY, $professional->key);
+
+        return $professional;
     }
 
     /**
@@ -117,9 +151,9 @@ class AgendaController extends Controller
     /**
      * @return Collection<int, Appointment>
      */
-    protected function appointmentsInRange(CarbonImmutable $start, CarbonImmutable $end, bool $refresh): Collection
+    protected function appointmentsInRange(Professional $professional, CarbonImmutable $start, CarbonImmutable $end, bool $refresh): Collection
     {
-        return $this->importer->all($refresh)
+        return $this->importer->all($professional, $refresh)
             ->filter(fn (Appointment $a) => $a->date->betweenIncluded($start, $end))
             ->values();
     }

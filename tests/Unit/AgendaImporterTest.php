@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\AgendaImporter;
+use App\Services\SheetTabResolver;
 use App\Support\Appointment;
 
 it('parseia o CSV em appointments, ignorando linhas vazias e inválidas', function () {
@@ -13,7 +14,7 @@ it('parseia o CSV em appointments, ignorando linhas vazias e inválidas', functi
         '"22/05/2026","13:30","3:00:00","Jhessy","Brasileiro Fox Eyes","A confirmar","obs","Maria"',
     ]);
 
-    $appointments = (new AgendaImporter)->parse($csv);
+    $appointments = (new AgendaImporter(new SheetTabResolver))->parse($csv);
 
     expect($appointments)->toHaveCount(3);
 
@@ -44,7 +45,7 @@ it('mapeia colunas pelo cabeçalho e lê Aplicação/Manutenção mesmo inserida
         '"lixo","x","","","","","",""',
     ]);
 
-    $appointments = (new AgendaImporter)->parse($csv);
+    $appointments = (new AgendaImporter(new SheetTabResolver))->parse($csv);
 
     expect($appointments)->toHaveCount(2);
 

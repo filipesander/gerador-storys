@@ -12,6 +12,15 @@ beforeEach(function () {
     ]);
 
     Http::fake(['docs.google.com/*' => Http::response($csv, 200, ['Content-Type' => 'text/csv'])]);
+
+    config([
+        'agenda.default' => 'thay',
+        'agenda.professionals' => [
+            'thay' => ['label' => 'Thay', 'sheet_id' => 'planilha-thay', 'sheet_gid' => '111'],
+            'gaby' => ['label' => 'Gaby', 'sheet_id' => 'planilha-gaby', 'sheet_gid' => '222'],
+            'mika' => ['label' => 'Mika', 'sheet_id' => 'planilha-mika', 'sheet_gid' => '333'],
+        ],
+    ]);
 });
 
 test('visitantes são redirecionados ao login', function () {
@@ -26,12 +35,56 @@ test('usuário autenticado vê a agenda', function () {
 });
 
 test('a página expõe a marca para o export PNG no client', function () {
-    config(['agenda.brand' => 'Thay']);
-
     $this->actingAs(User::factory()->create())
         ->get(route('agenda'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('brand', 'Thay'));
+});
+
+test('a página lista as profissionais e marca a selecionada', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('agenda', ['professional' => 'gaby']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('professional', 'gaby')
+            ->where('brand', 'Gaby')
+            ->where('professionals', [
+                ['key' => 'thay', 'label' => 'Thay'],
+                ['key' => 'gaby', 'label' => 'Gaby'],
+                ['key' => 'mika', 'label' => 'Mika'],
+            ])
+            ->etc());
+});
+
+test('uma profissional desconhecida cai para a padrão', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('agenda', ['professional' => 'ninguem']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('professional', 'thay'));
+});
+
+test('a agenda lembra a última profissional escolhida', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('agenda', ['professional' => 'mika']))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('agenda'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('professional', 'mika'));
+});
+
+test('cada profissional lê a própria planilha', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('agenda.exportar', ['professional' => 'mika', 'date' => '2026-05-21']))
+        ->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'planilha-mika')
+        && str_contains($request->url(), 'gid=333'));
+
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'planilha-thay'));
 });
 
 test('exporta a agenda em PDF', function () {
@@ -40,6 +93,15 @@ test('exporta a agenda em PDF', function () {
 
     $response->assertOk();
     expect($response->headers->get('content-type'))->toContain('application/pdf');
+});
+
+test('o PDF sai com a profissional no nome do arquivo', function () {
+    $response = $this->actingAs(User::factory()->create())
+        ->get(route('agenda.exportar', ['professional' => 'gaby', 'period' => 'dia', 'date' => '2026-05-21']));
+
+    $response->assertOk();
+    expect($response->headers->get('content-disposition'))
+        ->toContain('agenda-gaby-dia-2026-05-21.pdf');
 });
 
 test('exporta o PDF mesmo quando a planilha do Google está indisponível', function () {

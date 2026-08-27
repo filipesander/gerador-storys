@@ -36,8 +36,12 @@ type Appointment = {
 
 type AppointmentsPayload = { ok: boolean; items: Appointment[] };
 
+type ProfessionalOption = { key: string; label: string };
+
 type Props = {
     brand: string;
+    professional: string;
+    professionals: ProfessionalOption[];
     period: 'dia' | 'semana';
     date: string;
     range: { start: string; end: string };
@@ -51,10 +55,17 @@ function shiftISO(iso: string, days: number): string {
     return d.toISOString().slice(0, 10);
 }
 
-function visit(period: string, date: string, refresh = false) {
+function visit(
+    professional: string,
+    period: string,
+    date: string,
+    refresh = false,
+) {
     router.get(
         agenda().url,
-        refresh ? { period, date, refresh: 1 } : { period, date },
+        refresh
+            ? { professional, period, date, refresh: 1 }
+            : { professional, period, date },
         { preserveState: true, preserveScroll: true, preserveUrl: false },
     );
 }
@@ -97,13 +108,20 @@ function AgendaSkeleton() {
     );
 }
 
-function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
+function AppointmentList({
+    brand,
+    payload,
+}: {
+    brand: string;
+    payload: AppointmentsPayload;
+}) {
     if (!payload.ok) {
         return (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
                 <p className="text-sm text-muted-foreground">
-                    Não consegui ler a planilha agora. Verifique a conexão e
-                    tente de novo.
+                    Não consegui ler a planilha de {brand} agora. Confira se ela
+                    está compartilhada como &quot;qualquer pessoa com o link
+                    pode ver&quot; e tente de novo.
                 </p>
                 <Button
                     variant="outline"
@@ -205,13 +223,15 @@ function AppointmentList({ payload }: { payload: AppointmentsPayload }) {
 
 export default function AgendaIndex({
     brand,
+    professional,
+    professionals,
     period,
     date,
     range,
     appointments,
 }: Props) {
     const step = period === 'semana' ? 7 : 1;
-    const exportHref = `/agenda/exportar?period=${period}&date=${date}`;
+    const exportHref = `/agenda/exportar?professional=${professional}&period=${period}&date=${date}`;
 
     const exportRef = useRef<HTMLDivElement>(null);
     const [exportingPng, setExportingPng] = useState(false);
@@ -228,7 +248,7 @@ export default function AgendaIndex({
         try {
             await exportAgendaToPng(
                 exportRef.current,
-                buildAgendaFilename(period, date),
+                buildAgendaFilename(professional, period, date),
             );
         } catch {
             toast.error('Não consegui gerar o PNG. Tente de novo.');
@@ -242,11 +262,38 @@ export default function AgendaIndex({
             <Head title="Agenda" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                {professionals.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-muted-foreground">
+                            Agenda de
+                        </span>
+                        <ToggleGroup
+                            type="single"
+                            value={professional}
+                            onValueChange={(value) =>
+                                value && visit(value, period, date)
+                            }
+                            variant="outline"
+                        >
+                            {professionals.map((option) => (
+                                <ToggleGroupItem
+                                    key={option.key}
+                                    value={option.key}
+                                >
+                                    {option.label}
+                                </ToggleGroupItem>
+                            ))}
+                        </ToggleGroup>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <ToggleGroup
                         type="single"
                         value={period}
-                        onValueChange={(value) => value && visit(value, date)}
+                        onValueChange={(value) =>
+                            value && visit(professional, value, date)
+                        }
                         variant="outline"
                     >
                         <ToggleGroupItem value="dia">Dia</ToggleGroupItem>
@@ -257,7 +304,13 @@ export default function AgendaIndex({
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => visit(period, shiftISO(date, -step))}
+                            onClick={() =>
+                                visit(
+                                    professional,
+                                    period,
+                                    shiftISO(date, -step),
+                                )
+                            }
                         >
                             <ChevronLeft className="size-4" />
                         </Button>
@@ -265,6 +318,7 @@ export default function AgendaIndex({
                             variant="outline"
                             onClick={() =>
                                 visit(
+                                    professional,
                                     period,
                                     new Date().toISOString().slice(0, 10),
                                 )
@@ -275,7 +329,13 @@ export default function AgendaIndex({
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => visit(period, shiftISO(date, step))}
+                            onClick={() =>
+                                visit(
+                                    professional,
+                                    period,
+                                    shiftISO(date, step),
+                                )
+                            }
                         >
                             <ChevronRight className="size-4" />
                         </Button>
@@ -284,7 +344,7 @@ export default function AgendaIndex({
                             value={date}
                             onChange={(event) =>
                                 event.target.value &&
-                                visit(period, event.target.value)
+                                visit(professional, period, event.target.value)
                             }
                             className="rounded-md border bg-background px-3 py-1.5 text-sm"
                         />
@@ -294,7 +354,9 @@ export default function AgendaIndex({
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => visit(period, date, true)}
+                            onClick={() =>
+                                visit(professional, period, date, true)
+                            }
                             title="Atualizar"
                         >
                             <RefreshCw className="size-4" />
@@ -323,6 +385,7 @@ export default function AgendaIndex({
 
                 <Deferred data="appointments" fallback={<AgendaSkeleton />}>
                     <AppointmentList
+                        brand={brand}
                         payload={appointments ?? { ok: true, items: [] }}
                     />
                 </Deferred>

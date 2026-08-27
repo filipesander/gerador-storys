@@ -1,7 +1,11 @@
 import { toPng } from 'html-to-image';
 
-export function buildAgendaFilename(period: string, date: string): string {
-    return `agenda-${period}-${date}.png`;
+export function buildAgendaFilename(
+    professional: string,
+    period: string,
+    date: string,
+): string {
+    return `agenda-${professional}-${period}-${date}.png`;
 }
 
 export async function exportAgendaToPng(
